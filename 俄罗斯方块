@@ -192,3 +192,108 @@ FUNCTION_RESULT t_spin(int direction)
             }
         }
     }
+    return FUNCTION_FAIL;
+}
+
+//以中心点旋转
+//以其他点旋转
+//检查以中心点旋转后能否向下移动一格
+//检查以其他点旋转后能否向下移动一格
+FUNCTION_RESULT try_rotate(int direction)
+{
+    if (now_shape == O_SHAPE)return FUNCTION_FAIL;
+    if (now_shape == T_SHAPE)return t_spin(direction);
+    for (int round = 0; round <= 1; round++)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                next_faller[j].X = faller[i].X + direction * (faller[i].Y - faller[j].Y);
+                next_faller[j].Y = faller[i].Y + direction * (faller[j].X - faller[i].X) + round;
+            }
+            if (is_legal(next_faller))
+            {
+                for (int i = 0; i < 4; i++) map[faller[i].Y][faller[i].X] = AIR;
+                memcpy(faller, next_faller, sizeof(faller));
+                for (int i = 0; i < 4; i++) map[faller[i].Y][faller[i].X] = MOVING;
+                return FUNCTION_SUSSESS;
+            }
+        }
+    }
+    return FUNCTION_FAIL;
+}
+
+
+int main()
+{
+    //清除光标
+    hdl = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO cci = { 1,0 };
+    SetConsoleCursorInfo(hdl, &cci);
+    SetConsoleTitle("TETRIS!!!");
+
+    //随机数种子
+    srand((unsigned)time(NULL));
+    
+    //地图初始化
+    memset(map, 0, WIDTH * HIGTH * sizeof(char));
+
+    //计时开始
+    last = GetTickCount64();
+    keyboard_flag = 0;
+
+    //生成第一个方块
+    generate();
+    update_screen();
+
+    while (1)//主循环
+    {
+        now = GetTickCount64();
+        //说明该向下移动了
+        if (keyboard_flag)
+        {
+            keyboard_flag = 0;
+            last = GetTickCount64() + COOLDOWN;
+            update_screen();
+        }
+        if (now > last)
+        {
+            last += TICK;
+            if (try_move_down() == FUNCTION_FAIL)//向下移动失败，创建一个新的形状
+            {
+                for (int i = 0; i < 4; i++) map[faller[i].Y][faller[i].X] = BLOCK;
+                clear_row();
+                generate();
+            }
+            update_screen();
+        }
+
+        while (_kbhit())
+        {
+            key = _getch();
+            switch (key)
+            {
+            case 'E':case 'e':
+                if (try_rotate(1) == FUNCTION_SUSSESS)keyboard_flag = 1;
+                break;
+            case 'Q':case 'q':
+                if (try_rotate(-1) == FUNCTION_SUSSESS)keyboard_flag = 1;
+                break;
+            case 'S':case 's':
+                if (try_move_down() == FUNCTION_SUSSESS)keyboard_flag = 1;
+                break;
+            case 'W':case 'w':
+                if (try_fall() == FUNCTION_SUSSESS)keyboard_flag = 1;
+                break;
+            case 'D':case 'd':
+                if (try_move_horizontal(1) == FUNCTION_SUSSESS)keyboard_flag = 1;
+                break;
+            case 'A':case 'a':
+                if (try_move_horizontal(-1) == FUNCTION_SUSSESS)keyboard_flag = 1;
+                break;
+            }
+        }
+    }
+    return 0;
+}
