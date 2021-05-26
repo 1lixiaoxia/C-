@@ -1,0 +1,1125 @@
+#include <graphics.h>
+
+#include <stdio.h>
+
+#include <conio.h>
+
+#include <time.h>
+
+/*定义常量*/
+
+#define Wide_boxs 10 // 地图的宽度
+
+#define High_boxs 20 // 地图的高度
+
+#define BSIZE   32 // 方块的像素长度
+
+#define MAX_BOX    19      // 方块的个数，共19个
+
+#define Map_Start_X 32 // 底板起始坐标x
+
+#define Map_Start_Y 32 // 底板起始坐标y
+
+#define Next_Start_X 416 // 底板起始坐标x
+
+#define Next_Start_Y 64 // 底板起始坐标y
+
+#define _UP 72 // 方块旋转
+
+#define _LEFT 75 // 方块向左移动
+
+#define _RIGHT 77 // 方块向右移动
+
+#define _DOWN 80 // 方块向下移动
+
+////////////////////////////////////////////////////////
+
+/*定义数据结构和全局变量*/
+
+//定义游戏底板结构体
+
+struct BOARD
+
+{
+
+bool var;   //当前状态标志，true已使用，false未使用
+
+int  color; //颜色
+
+};
+
+//定义游戏方块结构体
+
+struct SHAPE
+
+{
+
+int  box[2]; // 1字节等于8位，每4位表示方块一个一行
+
+int  color; //方块颜色
+
+int  next; //下一个方块的编号
+
+};
+
+SHAPE shapes[MAX_BOX] = /*初始化方块内容，即定义MAX_BOX个SHAPE类型的结构数组*/
+
+{
+
+//L型方块
+
+{ 0x88, 0xc0,CYAN, 1 },
+
+{ 0xe8, 0x0, CYAN, 2 },
+
+{ 0xc4, 0x40,CYAN, 3 },
+
+{ 0x2e, 0x0, CYAN, 0 },
+
+
+
+//反L型方块
+
+{ 0x44, 0xc0,MAGENTA, 5 },
+
+{ 0x8e, 0x0, MAGENTA, 6 },
+
+{ 0xc8, 0x80,MAGENTA, 7 },
+
+{ 0xe2, 0x0, MAGENTA, 4 },
+
+
+
+//反Z型方块
+
+{ 0x8c, 0x40,YELLOW, 9 },
+
+{ 0x6c, 0x0, YELLOW, 8 },
+
+
+
+//Z型方块
+
+{ 0x4c, 0x80,BROWN, 11 },
+
+{ 0xc6, 0x0,BROWN,  10 },
+
+
+
+//T型方块
+
+{ 0x4e, 0x0,GREEN,  13 },
+
+{ 0x8c, 0x80,GREEN, 14 },
+
+{ 0xe4, 0x0, GREEN, 15 },
+
+{ 0x4c, 0x40,GREEN, 12 },
+
+
+
+//I型方块
+
+{ 0x88, 0x88, RED, 17 },
+
+{ 0xf0, 0x0, RED,  16 },
+
+
+
+//O型方块
+
+{ 0xCC, 0x0,BLUE,  18 },
+
+};
+
+//定义地图
+
+BOARD map[Wide_boxs][High_boxs];//定义地图
+
+BOARD next[4][4];//定义方块生成区
+
+int next_box = -1; //保存新的方块的序号
+
+//控制中的方块
+
+struct
+
+{
+
+int x;
+
+int y;
+
+BOARD move[4][4];
+
+int num;//方块号
+
+}movebox;
+
+int score = 0;//游戏得分
+
+bool gameon = true;//游戏结束
+
+bool stop = false;//游戏暂停
+
+
+
+/*声明函数*/
+
+void Initialization();//初始化游戏
+
+void InitDrawBK();//初始化背景
+
+void DrawNewBox();//绘制显示区方块
+
+void MakeNextBox(); //生成新的方块
+
+void Render(); //重绘游戏区
+
+void SetBox(int n, BOARD box[][4]);
+
+
+
+void Move_Down();//下移
+
+bool Can_Down();
+
+
+
+void Move_Up();//旋转
+
+bool Can_Up();
+
+
+
+void Move_Left();//左移
+
+bool Can_Left();
+
+
+
+void Move_Right();//右移
+
+bool Can_Right();
+
+
+
+bool IsFullRow(int); //查找满行
+
+void DelFullRow(int);//删除满行
+
+
+
+//////////////主程序/////////////////////////
+
+int main()
+
+{
+
+initgraph(600,800);
+
+setbkcolor(LIGHTGRAY);
+
+cleardevice();
+
+Initialization(); //初始化游戏
+
+BeginBatchDraw();
+
+while (gameon)   //主循环
+
+{
+
+if (_kbhit())
+
+{
+
+char c = _getch();
+
+
+
+if (c == -32 && !stop)
+
+{
+
+c = _getch();
+
+
+
+switch (c)
+
+{
+
+case _UP://旋转
+
+Move_Up();
+
+break;
+
+
+
+case _LEFT://向左移动
+
+Move_Left();
+
+break;
+
+
+
+case _RIGHT://向右移动
+
+Move_Right();
+
+break;
+
+
+
+case _DOWN:
+
+default:break;
+
+}
+
+}
+
+else if (c ==' ')//暂停
+
+{
+
+stop = !stop;
+
+}
+
+}
+
+if (!stop)
+
+{
+
+if (Can_Down())
+
+{
+
+Move_Down(); //下移
+
+}
+
+else
+
+{
+
+
+
+if (movebox.y == 0)
+
+{
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.move[i][j].var && map[movebox.x + i][movebox.y + j].var)
+
+{
+
+gameon = false;
+
+break;
+
+}
+
+}
+
+}
+
+else
+
+{
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.x + i > -1 && movebox.x + i < 10 && movebox.y + j < 20)
+
+{
+
+if (movebox.move[i][j].var)
+
+{
+
+map[movebox.x + i][movebox.y + j].var = movebox.move[i][j].var;
+
+map[movebox.x + i][movebox.y + j].color = movebox.move[i][j].color;
+
+}
+
+}
+
+}
+
+movebox.x = 3;
+
+movebox.y = 0;
+
+movebox.num = next_box;
+
+SetBox(movebox.num, movebox.move);
+
+MakeNextBox(); //重新生成方块
+
+DrawNewBox();  //绘制生成区方块
+
+}
+
+}
+
+//消行判定
+
+for (int i = 0; i < High_boxs; i++)
+
+{
+
+if (IsFullRow(i))
+
+{
+
+DelFullRow(i);
+
+score += 10;
+
+i--;
+
+}
+
+}
+
+//绘制图像
+
+Render();
+
+FlushBatchDraw();
+
+}
+
+fflush(stdin);
+
+Sleep(300); //延时
+
+}
+
+EndBatchDraw();
+
+system("pause");
+
+closegraph(); //关闭绘图窗口
+
+return 0;
+
+}
+
+//////功能函数/////////////
+
+void InitDrawBK()
+
+{
+
+//绘制游戏区
+
+setfillcolor(WHITE);
+
+setlinecolor(RED);
+
+fillrectangle(Map_Start_X, Map_Start_Y, Map_Start_X + Wide_boxs* BSIZE, Map_Start_Y + High_boxs * BSIZE);
+
+
+
+setlinecolor(LIGHTGRAY);
+
+for (int i = 0; i < 9; i++)
+
+{
+
+line(Map_Start_X + (i + 1) * BSIZE, Map_Start_Y, Map_Start_X + (i + 1) * BSIZE, Map_Start_Y + High_boxs * BSIZE);
+
+}
+
+for (int i = 0; i < 19; i++)
+
+{
+
+line(Map_Start_X, Map_Start_Y + (i + 1) * BSIZE, Map_Start_X + Wide_boxs * BSIZE, Map_Start_Y + (i + 1) * BSIZE);
+
+}
+
+
+
+//绘制方块生成区
+
+setfillcolor(WHITE);
+
+setlinecolor(RED);
+
+fillrectangle(Next_Start_X, Next_Start_Y, Next_Start_X + 4 * BSIZE, Next_Start_Y + 4 * BSIZE);
+
+setlinecolor(LIGHTGRAY);
+
+for (int i = 0; i < 3; i++)
+
+{
+
+line(Next_Start_X + (i + 1) * BSIZE, Next_Start_Y, Next_Start_X + (i + 1) * BSIZE, Next_Start_Y + High_boxs * BSIZE);
+
+}
+
+for (int i = 0; i < 3; i++)
+
+{
+
+line(Next_Start_X, Next_Start_Y + (i + 1) * BSIZE, Next_Start_X + Wide_boxs * BSIZE, Next_Start_Y + (i + 1) * BSIZE);
+
+}
+
+
+
+outtextxy(410, 32,  "下一个方块预览区");
+
+outtextxy(400, 256, "游戏说明");
+
+outtextxy(400, 276, "用方向键控制方块的移动。");
+
+outtextxy(400, 296, "左箭头：左移。");
+
+outtextxy(400, 316, "右箭头：右移。");
+
+outtextxy(400, 336, "上箭头：旋转。");
+
+outtextxy(400, 356, "下箭头：下移。");
+
+outtextxy(400, 376, "空格键：暂停。");
+
+outtextxy(400, 450, "当前游戏分数：");
+
+}
+
+
+
+void Initialization()
+
+{
+
+InitDrawBK();
+
+srand((unsigned)time(NULL));
+
+MakeNextBox(); //生成一个新的方块
+
+movebox.x = 3;
+
+movebox.y = 0;
+
+movebox.num = next_box;
+
+SetBox(movebox.num, movebox.move);
+
+MakeNextBox(); //重新生成方块
+
+DrawNewBox();  //绘制生成区方块
+
+}
+
+
+
+void SetBox(int n, BOARD box[][4])
+
+{
+
+int mask = 128;
+
+for (int i = 0; i < 4; i++)
+
+{
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if ((shapes[n].box[i / 2]) & mask)
+
+{
+
+box[j][i].var = true;
+
+box[j][i].color = shapes[n].color;
+
+}
+
+else
+
+{
+
+box[j][i].var = false;
+
+box[j][i].color = WHITE;
+
+}
+
+mask = mask / 2;
+
+if (mask == 0) mask = 128;
+
+}
+
+}
+
+}
+
+
+
+//生成新的方块
+
+void MakeNextBox()
+
+{
+
+next_box = rand() % MAX_BOX;
+
+SetBox(next_box, next);
+
+}
+
+
+
+void DrawNewBox()
+
+{
+
+setfillcolor(WHITE);
+
+setlinecolor(RED);
+
+fillrectangle(Next_Start_X, Next_Start_Y, Next_Start_X + 4 * BSIZE, Next_Start_Y + 4 * BSIZE);
+
+setlinecolor(LIGHTGRAY);
+
+for (int i = 0; i < 3; i++)
+
+{
+
+line(Next_Start_X + (i + 1) * BSIZE, Next_Start_Y, Next_Start_X + (i + 1) * BSIZE, Next_Start_Y + High_boxs * BSIZE);
+
+}
+
+for (int i = 0; i < 3; i++)
+
+{
+
+line(Next_Start_X, Next_Start_Y + (i + 1) * BSIZE, Next_Start_X + Wide_boxs * BSIZE, Next_Start_Y + (i + 1) * BSIZE);
+
+}
+
+
+
+
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (next[i][j].var)
+
+{
+
+setfillcolor(next[i][j].color);
+
+setlinecolor(0);
+
+fillrectangle(Next_Start_X + i * BSIZE, Next_Start_Y + j * BSIZE,
+
+Next_Start_X + (i + 1) * BSIZE, Next_Start_Y + (j + 1) * BSIZE);
+
+}
+
+}
+
+}
+
+
+
+void Render()
+
+{
+
+//绘制游戏区
+
+setfillcolor(WHITE);
+
+setlinecolor(RED);
+
+fillrectangle(Map_Start_X, Map_Start_Y, Map_Start_X + Wide_boxs * BSIZE, Map_Start_Y + High_boxs * BSIZE);
+
+
+
+setlinecolor(LIGHTGRAY);
+
+for (int i = 0; i < 9; i++)
+
+{
+
+line(Map_Start_X + (i + 1) * BSIZE, Map_Start_Y, Map_Start_X + (i + 1) * BSIZE, Map_Start_Y + High_boxs * BSIZE);
+
+}
+
+for (int i = 0; i < 19; i++)
+
+{
+
+line(Map_Start_X, Map_Start_Y + (i + 1) * BSIZE, Map_Start_X + Wide_boxs * BSIZE, Map_Start_Y + (i + 1) * BSIZE);
+
+}
+
+
+
+for (int i = 0; i < Wide_boxs; i++)
+
+for (int j = 0; j < High_boxs; j++)
+
+{
+
+if (map[i][j].var)
+
+{
+
+setfillcolor(map[i][j].color);
+
+setlinecolor(0);
+
+fillrectangle(Map_Start_X + i * BSIZE, Map_Start_Y + j * BSIZE,
+
+Map_Start_X + (i + 1) * BSIZE, Map_Start_Y + (j + 1) * BSIZE);
+
+}
+
+}
+
+
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.move[i][j].var)
+
+{
+
+setfillcolor(movebox.move[i][j].color);
+
+setlinecolor(0);
+
+fillrectangle(Map_Start_X+ movebox.x * BSIZE + i * BSIZE, Map_Start_Y + movebox.y * BSIZE + j * BSIZE,
+
+Map_Start_X + movebox.x * BSIZE + (i + 1) * BSIZE, Map_Start_Y + movebox.y * BSIZE + (j + 1) * BSIZE);
+
+}
+
+}
+
+
+
+//显示得分
+
+char score_str[5];
+
+sprintf_s(score_str, "%03d", score); //将整形a转换成字符串
+
+outtextxy(520, 450, score_str); //将字符串输出到界面上
+
+}
+
+
+
+void Move_Down()
+
+{
+
+movebox.y++;
+
+}
+
+
+
+bool Can_Down()
+
+{
+
+
+
+if (movebox.y == 19)
+
+{
+
+return false;
+
+}
+
+else if (movebox.y == 18)
+
+{
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 1; j < 2; j++)
+
+{
+
+if (movebox.move[i][j].var) return false;
+
+}
+
+}
+
+else if (movebox.y == 17)
+
+{
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 2; j < 3; j++)
+
+{
+
+if (movebox.move[i][j].var) return false;
+
+}
+
+}
+
+else if (movebox.y == 16)
+
+{
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 3; j < 4; j++)
+
+{
+
+if (movebox.move[i][j].var) return false;
+
+}
+
+}
+
+
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.y + j + 1 < 20 && movebox.x + i > -1 && movebox.x + i < 10)
+
+{
+
+if (movebox.move[i][j].var && map[movebox.x + i][movebox.y + j + 1].var) return false;
+
+}
+
+}
+
+return true;
+
+}
+
+
+
+void Move_Up()
+
+{
+
+//得到下一个方块号
+
+if (Can_Up()) 
+
+{
+
+movebox.num = shapes[movebox.num].next;
+
+SetBox(movebox.num, movebox.move);
+
+}
+
+}
+
+
+
+bool Can_Up()
+
+{
+
+BOARD n_box[4][4];
+
+SetBox(shapes[movebox.num].next, n_box);
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (n_box[i][j].var)
+
+{
+
+if (movebox.y + j  < 20 && movebox.x + i > -1 && movebox.x + i < 10)
+
+{
+
+if (map[movebox.x + i][movebox.y + j].var) return false;
+
+}
+
+else return false;
+
+}
+
+}
+
+return true;
+
+}
+
+
+
+void Move_Left()
+
+{
+
+if (Can_Left())
+
+movebox.x--;
+
+}
+
+
+
+bool Can_Left()
+
+{
+
+if (movebox.x == -3)
+
+{
+
+return false;
+
+}
+
+else if (movebox.x == -2)
+
+{
+
+for (int i = 2; i < 3; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.move[i][j].var) return false;
+
+}
+
+}
+
+else if (movebox.x == -1)
+
+{
+
+for (int i = 1; i < 2; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.move[i][j].var) return false;
+
+}
+
+}
+
+else if (movebox.x == 0)
+
+{
+
+for (int i = 0; i < 1; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.move[i][j].var) return false;
+
+}
+
+}
+
+
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.y + j  < 20 && movebox.x + i - 1 > -1 && movebox.x + i - 1 < 10)
+
+{
+
+if (movebox.move[i][j].var && map[movebox.x + i - 1][movebox.y + j].var) return false;
+
+}
+
+}
+
+return true;
+
+}
+
+void Move_Right()
+
+{
+
+if (Can_Right())
+
+movebox.x++;
+
+}
+
+bool Can_Right()
+
+{
+
+if (movebox.x == 9)
+
+{
+
+return false;
+
+}
+
+else if (movebox.x == 8)
+
+{
+
+for (int i = 1; i < 2; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.move[i][j].var) return false;
+
+}
+
+}
+
+else if (movebox.x == 7)
+
+{
+
+for (int i = 2; i < 3; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.move[i][j].var) return false;
+
+}
+
+}
+
+else if (movebox.x == 6)
+
+{
+
+for (int i = 3; i < 4; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.move[i][j].var) return false;
+
+}
+
+}
+
+
+
+for (int i = 0; i < 4; i++)
+
+for (int j = 0; j < 4; j++)
+
+{
+
+if (movebox.y + j  < 20 && movebox.x + i + 1 > -1 && movebox.x + i + 1 < 10)
+
+{
+
+if (movebox.move[i][j].var && map[movebox.x + i + 1][movebox.y + j].var) return false;
+
+}
+
+}
+
+return true;
+
+}
+
+bool IsFullRow(int n)
+
+{
+
+for (int i = 0; i < Wide_boxs; i++)
+
+{
+
+if (!map[i][n].var) return false;
+
+}
+
+return true;
+
+}
+
+void DelFullRow(int n)
+
+{
+
+for (int i = 0; i < Wide_boxs; i++)
+
+for (int j = n; j > 0; j--)
+
+{
+
+map[i][j].var = map[i][j - 1].var;
+
+map[i][j].color = map[i][j - 1].color;
+
+}
+
+for (int i = 0; i < Wide_boxs; i++)
+
+map[i][0].var = false;
+
+}
