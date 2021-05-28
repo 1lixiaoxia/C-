@@ -1,0 +1,78 @@
+#include
+
+#include
+
+#include
+
+#include
+
+#include
+
+#pragma comment(lib,"WINMM.LIB")
+
+float man_x; //定义人物的横坐标
+
+float man_y; //定义人物的纵坐标
+
+float man_vy_begin; //定义人物的垂直起跳初速度
+
+float man_vx; //定义人物的水平速度
+
+float man_vy; //定义人物的实时垂直速度
+
+float a_vy; //定义垂直速度方向的重力加速度
+
+int sky_if; //这个变量用于记载人物状态 空中状态为1 非空中状态为0 只有当非空中状态时才可以按‘w’起跳 空中状态人物受重力
+
+float bullet_x[4],bullet_y[4]; //定义地图自动发射的子弹的坐标
+
+float bullet_vx[4],bullet_vy[4];//定义地图自动发射的子弹的速度
+
+float bullet_v1,bullet_v0; //定义两种速度情况
+
+int shoot_time; //这个变量用于实现让子弹固定时间段发射一次
+
+int shoot_if; //这个变量用来决定子弹多久发射一次
+
+int live=1;
+
+int footnum=0;
+
+IMAGE man_shadow;
+
+IMAGE img_bk; //定义 IMAGE 对象 背景
+
+IMAGE img_man; //定义 IMAGE 对象 人物
+
+IMAGE zhezhao;//定义 IMAGE 对象 人物遮罩
+
+IMAGE right;
+
+IMAGE right_zhezhao;
+
+IMAGE left;
+
+IMAGE left_zhezhao;
+
+IMAGE img_bullet1; //定义 IMAGE 对象 地图自动发射子弹
+
+IMAGE img_bullet; //定义 IMAGE 对象 子弹遮罩
+
+IMAGE img_start;//定义 IMAGE 对象 开始界面
+
+IMAGE img_pause; //定义 IMAGE 对象 暂停界面
+
+int gameStatus = 0; // 游戏状态，0为初始菜单界面，1为正常游戏，2为结束游戏状态，3为游戏暂停
+
+void readRecordFile() //读取游戏数据文件存档
+
+{
+FILE *fp;
+
+fp = fopen(".\\gameRecord.dat","r");
+
+fscanf(fp,"%f %f %f %f",&man_x,&man_y,&bullet_x,&bullet_y);
+
+fclose(fp);
+
+}
