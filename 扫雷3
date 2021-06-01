@@ -1,0 +1,178 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<time.h>
+ 
+#define ROW 9
+#define COL 9
+ 
+#define ROWS ROW+2
+#define COLS COL+2
+ 
+#define EASY_COUNT 10
+ 
+//函数声明
+void ChushiBoard(char board[ROWS][COLS],int rows,int cols,char set);
+void Dayinboard(char board[ROWS][COLS], int row, int col);
+void BuzhiBoard(char mine[ROWS][COLS], int row, int col);
+void CaoleiBoard(char mine[ROWS][COLS],char show[ROWS][COLS],int row,int col);
+ 
+void menu()
+{
+ printf("*****************************************\n");
+ printf("*****************************************\n");
+ printf("**** 输入1开始游戏 输入0退出游戏 *****\n");
+ printf("*****************************************\n");
+ printf("*****************************************\n\n\n");
+}
+ 
+void game()
+{
+ char mine[ROWS][COLS];//存放雷
+ char show[ROWS][COLS];//显示排查出来的雷
+ //初始化
+ ChushiBoard(mine, ROWS, COLS,'0');//'0'
+ ChushiBoard(show, ROWS, COLS,'*');//'*'
+ //布置雷
+ BuzhiBoard(mine,ROW,COL);
+ //Dayinboard(mine, ROW, COL);
+ //打印棋盘
+ Dayinboard(show, ROW, COL);
+ //扫雷
+ CaoleiBoard(mine,show,ROW,COL);
+}
+ 
+ 
+ 
+void test()
+{
+ int input = 0;
+ do
+ {
+ menu();
+ printf("请输入:>");
+ scanf("%d", &input);
+ switch (input)
+ {
+ case 1:
+ game();
+ break;
+ case 0:
+ printf("退出游戏\n\n");
+ break;
+ default:
+ printf("输入错误，重新输入\n\n");
+ break;
+ }
+ } while (input);
+}
+ 
+ 
+int main()
+{
+ test();
+ system("pause");
+ return 0;
+}
+ 
+ 
+void ChushiBoard(char board[ROWS][COLS], int rows, int cols,char set)
+{
+ int i = 0;
+ int j = 0;
+ for (i = 0; i < rows; i++)
+ {
+ for (j = 0; j < cols; j++)
+ {
+ board[i][j] = set;
+ }
+ }
+}
+ 
+void Dayinboard(char board[ROWS][COLS], int row, int col)
+{
+ int i = 0;
+ int j = 0;
+ printf("------------------------------\n");
+ for (i = 0; i <= col; i++)
+ {
+ printf(" %d ", i);
+ }
+ printf("\n");
+ for (i = 1; i <= row; i++)
+ {
+ printf(" %d ", i);
+ for (j = 1; j <= col; j++)
+ {
+ printf(" %c ", board[i][j]);
+ }
+ printf("\n");
+ }
+ printf("------------------------------\n");
+}
+ 
+ 
+void BuzhiBoard(char mine[ROWS][COLS], int row, int col)
+{
+ int count = EASY_COUNT;
+ while (count)
+ {
+ int x = rand()%row+1;
+ int y = rand()%col+1;
+ if (mine[x][y] == '0')
+ {
+ mine[x][y] = '1';
+ count--;
+ }
+ }
+}
+ 
+static int GetMineCount(char mine[ROWS][COLS], int x, int y)
+{
+ return mine[x - 1][y] +
+ mine[x - 1][y - 1] +
+ mine[x][y - 1] +
+ mine[x + 1][y - 1] +
+ mine[x + 1][y] +
+ mine[x + 1][y + 1] +
+ mine[x][y + 1] +
+ mine[x - 1][y + 1] - 8 * '0';
+}
+ 
+ 
+ 
+void CaoleiBoard(char mine[ROWS][COLS], char show[ROWS][COLS], int row, int col)
+{
+ int x = 0;
+ int y = 0;
+ int win = 0;
+ while (win<row*col-EASY_COUNT)
+ {
+ printf("请输入要排查的坐标(格式：X空格X回车):>");
+ scanf("%d%d", &x, &y);
+ if (x >= 1 && x <= 9 && y >= 1 && y <= 9)
+ {
+ if (mine[x][y] == '1')
+ {
+ printf(" 很遗憾，你被炸死了！！！\n");
+ Dayinboard(mine, row, col);
+ break;
+ }
+ else
+ {
+ int count = GetMineCount(mine,x,y);
+ show[x][y] = count+'0';
+ Dayinboard(show, row, col);
+ win++;
+ }
+ 
+ }
+ else
+ {
+ printf("输入的坐标非法\n");
+ }
+ }
+ if (win == row*col - EASY_COUNT)
+ {
+ printf(" 恭喜你,你排雷成功了！！！\n");
+ }
+}
